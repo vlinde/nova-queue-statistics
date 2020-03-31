@@ -1,0 +1,30 @@
+{
+    "name": "vlinde/nova-queue-statistics",
+    "description": "A Laravel Nova tool.",
+    "keywords": [
+        "laravel",
+        "nova"
+    ],
+    "license": "MIT",
+    "require": {
+        "php": ">=7.1.0",
+        "spatie/laravel-failed-job-monitor": "^3.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "Vlinde\\NovaQueueStatistics\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Vlinde\\NovaQueueStatistics\\ToolServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
