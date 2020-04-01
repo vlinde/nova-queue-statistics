@@ -30,6 +30,11 @@ class ToolServiceProvider extends ServiceProvider
             . '/../src/config/queue_statistics.php' => config_path('queue_statistics.php'),
         ], 'config');
 
+        $this->publishes([
+            __DIR__
+            . '/../src/config/failed-job-monitor.php' => config_path('failed-job-monitor.php'),
+        ], 'config');
+
         $this->app->booted(function () {
             $this->routes();
         });
