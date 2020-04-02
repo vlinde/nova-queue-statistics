@@ -121,15 +121,15 @@ class CheckQueuedJobs extends Command
                 $fields['failed'] = 1;
             }
         } elseif ($type == 'set') {
-            $count = $redis->sCard($queue);
+            $fields['count'] = $redis->sCard($queue);
 
-            if($count >= $record->count) {
+            if($fields['count'] >= $record->count) {
                 $fields['failed'] = 1;
             }
         } elseif ($type == 'zset') {
-            $count = $redis->zCount($queue, Carbon::now()->subDay()->startOfDay()->timestamp, Carbon::now()->subDay()->endOfDay()->timestamp);
+            $fields['count'] = $redis->zCount($queue, Carbon::now()->subDay()->startOfDay()->timestamp, Carbon::now()->subDay()->endOfDay()->timestamp);
 
-            if($count > 0) {
+            if($fields['count'] > 0) {
                 $fields['failed'] = 1;
             }
         }
