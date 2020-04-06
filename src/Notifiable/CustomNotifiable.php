@@ -10,12 +10,12 @@ class CustomNotifiable
 
     public function routeNotificationForMail(): string
     {
-        return config('failed-job-monitor.mail.to');
+        return config('queue_statistics.mail.to');
     }
 
     public function routeNotificationForSlack(): string
     {
-        return config('failed-job-monitor.slack.webhook_url');
+        return config('queue_statistics.slack.webhook_url');
     }
 
     /**

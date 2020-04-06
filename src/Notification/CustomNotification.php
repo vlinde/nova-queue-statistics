@@ -7,17 +7,17 @@ use Illuminate\Notifications\Messages\SlackAttachment;
 use Illuminate\Notifications\Messages\SlackMessage;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Str;
-use Spatie\FailedJobMonitor\Notification as BaseNotification;
+use Illuminate\Notifications\Notification as BaseNotification;
 use Vlinde\NovaQueueStatistics\Classes\ThrottledNotification;
 
 class CustomNotification extends BaseNotification implements ThrottledNotification
 {
-    /** @var \Illuminate\Queue\Events\JobFailed */
+    /** @var JobFailed */
     protected $event;
 
     public function via($notifiable): array
     {
-        return config('failed-job-monitor.channels');
+        return config('queue_statistics.channels');
     }
 
     public function getEvent(): JobFailed
@@ -48,7 +48,7 @@ class CustomNotification extends BaseNotification implements ThrottledNotificati
         return (new SlackMessage)
             ->error()
             ->from(config('env.APP_NAME'))
-            ->to(config('failed-job-monitor.slack.channel'))
+            ->to(config('queue_statistics.slack.channel'))
             ->content('A job failed at ' . config('app.url'))
             ->attachment(function (SlackAttachment $attachment) {
                 $attachment->fields([

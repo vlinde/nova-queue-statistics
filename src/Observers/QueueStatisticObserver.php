@@ -26,9 +26,9 @@ class QueueStatisticObserver
     public function updated(QueueStatistic $queueStatistic)
     {
         if($queueStatistic->failed) {
-            $notifiable = app(config('failed-job-monitor.notifiable'));
+            $notifiable = app(config('queue_statistics.notifiable'));
 
-            $notification = app(config('failed-job-monitor.statistic.notification'))->setStatistic($queueStatistic);
+            $notification = app(config('queue_statistics.statistic.notification'))->setStatistic($queueStatistic);
 
             $notifiable->notify($notification);
         }
