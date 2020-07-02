@@ -25,10 +25,10 @@ class QueueStatisticObserver
      */
     public function updated(QueueStatistic $queueStatistic)
     {
-        if($queueStatistic->failed) {
+        if ($queueStatistic->failed) {
             $notifiable = app(config('queue_statistics.notifiable'));
-
-            $notification = app(config('queue_statistics.statistic.notification'))->setStatistic($queueStatistic);
+            $notification = app(config('queue_statistics.notification'))
+                ->setStatistic($queueStatistic);
 
             $notifiable->notify($notification);
         }

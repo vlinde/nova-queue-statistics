@@ -38,18 +38,23 @@ class CheckQueuedJobs extends Command
     /**
      * Execute the console command.
      *
-     * @return mixed
+     * @return void
      */
     public function handle()
     {
+        $records = 0;
         $startsWith = 'redis';
         $exclude = ['default'];
 
-        $queueConfig = collect(config('queue.connections'))->filter(function ($value, $key) use ($startsWith, $exclude) {
-            return Str::startsWith($key, $startsWith) && (!empty($value['connection']) && !in_array($value['connection'], $exclude));
-        })->groupBy('connection');
-
-        $records = [];
+        $queueConfig = collect(config('queue.connections'))
+            ->filter(function ($value, $key) use ($startsWith, $exclude) {
+                return Str::startsWith($key, $startsWith) &&
+                    (
+                        !empty($value['connection']) &&
+                        !in_array($value['connection'], $exclude)
+                    );
+            })
+            ->groupBy('connection');
 
         foreach ($queueConfig as $key => $connection) {
             $redis = Redis::connection($key);
@@ -57,85 +62,67 @@ class CheckQueuedJobs extends Command
             $queues = $connection->pluck('queue');
 
             foreach ($queues as $queue) {
-
                 $queueKeys = $redis->keys("queues:{$queue}*");
 
-                foreach ($queueKeys as $queueKey) {
-                    $type = $redis->type($queueKey);
-
-                    $records[] = $this->createOrUpdateQueueStatisticRecord($redis, $key, $queueKey, $type);
-
-                }
-
+                $records = $this->createOrUpdateQueueStatisticRecord($redis, $key, $queueKeys);
             }
         }
 
-        Log::info(__CLASS__ . ' statistics records count - ' . count($records));
-
-        return 'done';
+        Log::info(__CLASS__ . ' statistics records count - ' . $records);
     }
 
-    protected function createOrUpdateQueueStatisticRecord($redis, $connection, $queue, $type)
+    protected function createOrUpdateQueueStatisticRecord($redis, $connection, $queueKeys)
     {
+        $records = 0;
 
-//        QueueStatistic::updateOrCreate(
-//            [
-//                // create fields
-//            ], [
-//                // update fields
-//            ]
-//        );
+        foreach ($queueKeys as $queueKey) {
+            $failed = 0;
+            $count = 0;
 
-        $record = QueueStatistic::where([
-            'connection' => $connection,
-            'queue' => $queue
-        ])->first();
+            $type = $redis->type($queueKey);
 
-        $count = 0;
-
-        if(!$record) {
+            $record = QueueStatistic::where([
+                'connection' => $connection,
+                'queue' => $queueKey
+            ])->first();
 
             if ($type == 'list') {
-                $count = $redis->lLen($queue);
+                $count = $redis->lLen($queueKey);
             } elseif ($type == 'set') {
-                $count = $redis->sCard($queue);
+                $count = $redis->sCard($queueKey);
             } elseif ($type == 'zset') {
-                $count = $redis->zCount($queue, Carbon::now()->subDay()->startOfDay()->timestamp, Carbon::now()->subDay()->endOfDay()->timestamp);
+                $count = $redis->zCount(
+                    $queueKey,
+                    Carbon::now()->subDay()->startOfDay()->timestamp,
+                    Carbon::now()->subDay()->endOfDay()->timestamp
+                );
             }
 
-            return QueueStatistic::create([
-                'connection' => $connection,
-                'queue' => $queue,
-                'count' => $count
-            ]);
+            if (!$record) {
+                QueueStatistic::create([
+                    'connection' => $connection,
+                    'queue' => $queueKey,
+                    'count' => $count
+                ]);
+            } else {
+                $isTypeListFailed = $type == 'list' && $count >= $record->count;
+                $isTypeSetFailed = $type == 'set' && $count>= $record->count;
+                $isTypeZSetFailed = $type == 'zset' && $count > 0;
+
+                if ($isTypeListFailed || $isTypeSetFailed || $isTypeZSetFailed) {
+                    $failed = 1;
+                }
+
+                $record->update([
+                    'count' => $count,
+                    'failed' => $failed
+                ]);
+            }
+
+            $records++;
         }
 
-        $fields = [
-            'count' => 0,
-        ];
-
-        if ($type == 'list') {
-            $fields['count'] = $redis->lLen($queue);
-
-            if($fields['count'] >= $record->count) {
-                $fields['failed'] = 1;
-            }
-        } elseif ($type == 'set') {
-            $fields['count'] = $redis->sCard($queue);
-
-            if($fields['count'] >= $record->count) {
-                $fields['failed'] = 1;
-            }
-        } elseif ($type == 'zset') {
-            $fields['count'] = $redis->zCount($queue, Carbon::now()->subDay()->startOfDay()->timestamp, Carbon::now()->subDay()->endOfDay()->timestamp);
-
-            if($fields['count'] > 0) {
-                $fields['failed'] = 1;
-            }
-        }
-
-        return tap($record)->update($fields);
-
+        return $records;
     }
 
 }
