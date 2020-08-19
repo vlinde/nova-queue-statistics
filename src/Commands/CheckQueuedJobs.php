@@ -16,7 +16,7 @@ class CheckQueuedJobs extends Command
      *
      * @var string
      */
-    protected $signature = 'check_queued_jobs';
+    protected $signature = 'check:queued:jobs';
 
     /**
      * The console command description.
